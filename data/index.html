@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Horloge Familiale</title>
+<style>
+:root {
+  --bg:#0d1117; --surface:#161b22; --border:#30363d;
+  --accent:#58a6ff; --green:#3fb950; --text:#e6edf3; --muted:#8b949e;
+  --danger:#f85149; --warn:#d29922;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:system-ui,sans-serif; }
+header { background:var(--surface); border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; gap:12px; }
+header h1 { font-size:1rem; font-weight:600; }
+#status-bar { background:#0a1a0a; border-bottom:1px solid #1a3a1a; padding:6px 20px; font-size:.8rem; color:var(--muted); display:flex; gap:16px; flex-wrap:wrap; }
+.tabs { display:flex; border-bottom:1px solid var(--border); background:var(--surface); overflow-x:auto; }
+.tab { padding:10px 16px; cursor:pointer; font-size:.9rem; color:var(--muted); border-bottom:2px solid transparent; white-space:nowrap; }
+.tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.panel { display:none; padding:16px; max-width:700px; margin:0 auto; }
+.panel.active { display:block; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:14px; }
+.card h2 { font-size:.8rem; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px; }
+label { display:block; font-size:.82rem; color:var(--muted); margin-bottom:3px; margin-top:8px; }
+input[type=text], input[type=password], input[type=number], select {
+  width:100%; padding:7px 9px; background:#0d1117; border:1px solid var(--border);
+  border-radius:5px; color:var(--text); font-size:.88rem;
+}
+input:focus, select:focus { outline:none; border-color:var(--accent); }
+.toggle { display:flex; align-items:center; gap:8px; margin-top:8px; }
+.toggle input { width:auto; }
+button { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:.88rem; font-weight:500; }
+.btn-primary { background:var(--accent); color:#000; }
+.btn-success { background:var(--green); color:#000; }
+.btn-danger  { background:var(--danger); color:#fff; }
+.btn-sm { padding:4px 10px; font-size:.78rem; }
+.save-bar { position:sticky; bottom:0; background:var(--surface); border-top:1px solid var(--border); padding:10px 16px; display:flex; justify-content:flex-end; gap:8px; }
+#toast { position:fixed; top:16px; right:16px; padding:9px 16px; border-radius:7px; background:var(--green); color:#000; font-size:.88rem; font-weight:500; transform:translateY(-100px); transition:.3s; z-index:99; }
+#toast.show { transform:translateY(0); }
+#toast.err { background:var(--danger); color:#fff; }
+.row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+/* Thèmes */
+.theme-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; }
+.theme-card { border:2px solid var(--border); border-radius:7px; padding:7px; cursor:pointer; text-align:center; font-size:.75rem; }
+.theme-card.sel { border-color:var(--accent); background:rgba(88,166,255,.1); }
+.swatches { display:flex; gap:3px; justify-content:center; margin-bottom:4px; }
+.swatches span { width:10px; height:10px; border-radius:50%; }
+/* Calendrier */
+.act-cols { display:grid; grid-template-columns:50px 50px 1fr 60px 80px 116px 26px; gap:5px; font-size:.7rem; color:var(--muted); font-weight:600; padding:4px 0; border-bottom:2px solid var(--border); margin-bottom:2px; }
+.act-row { display:grid; grid-template-columns:50px 50px 1fr 60px 80px 116px 26px; gap:5px; align-items:center; padding:4px 0; border-bottom:1px solid #1a2030; }
+.act-row input, .act-row select { padding:4px; font-size:.8rem; }
+.days-line { display:flex; gap:2px; }
+.dchip { width:15px; height:18px; border:1px solid var(--border); border-radius:3px; background:var(--bg); color:var(--muted); font-size:.58rem; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+.dchip.on { background:var(--accent); color:#000; border-color:var(--accent); }
+/* Formulaire ajout */
+.add-grid { display:grid; grid-template-columns:58px 58px 1fr 68px 1fr; gap:8px; }
+.add-grid label { font-size:.75rem; }
+.add-days { display:flex; align-items:center; gap:6px; margin-top:8px; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⏰ Horloge Familiale</h1>
+  <span id="hdr-time" style="margin-left:auto;font-size:.85rem;color:var(--muted)"></span>
+</header>
+
+<div id="status-bar">
+  <span>📡 <b id="s-ip">—</b></span>
+  <span>📶 <b id="s-rssi">—</b> dBm</span>
+  <span>🕐 NTP: <b id="s-ntp">—</b></span>
+  <span>🌤️ Météo: <b id="s-weather">—</b></span>
+  <span>⚙️ Uptime: <b id="s-uptime">—</b></span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('wifi',this)">📡 WiFi</div>
+  <div class="tab" onclick="switchTab('time',this)">🕐 Heure</div>
+  <div class="tab" onclick="switchTab('weather',this)">🌤️ Météo</div>
+  <div class="tab" onclick="switchTab('display',this)">🖥️ Affichage</div>
+  <div class="tab" onclick="switchTab('calendar',this)">📅 Calendrier</div>
+  <div class="tab" onclick="switchTab('notes',this)">🗒️ Notes</div>
+  <div class="tab" onclick="switchTab('birthdays',this)">🎂 Anniversaires</div>
+</div>
+
+<!-- WiFi -->
+<div id="tab-wifi" class="panel active">
+  <div class="card">
+    <h2>Identité du dispositif</h2>
+    <label>Nom affiché au démarrage</label>
+    <input type="text" id="deviceName" maxlength="31" placeholder="Horloge Familiale">
+    <label>Nom mDNS <small style="color:var(--muted)">(accessible via <b id="mdns-preview">horloge</b>.local)</small></label>
+    <input type="text" id="mdnsName" maxlength="23" placeholder="horloge"
+           oninput="document.getElementById('mdns-preview').textContent=this.value||'horloge'"
+           pattern="[a-z0-9\-]+" title="Minuscules, chiffres et tirets uniquement">
+    <small style="color:var(--muted);font-size:.75rem">⚠️ Lettres minuscules, chiffres et tirets uniquement. Redémarre après sauvegarde.</small>
+  </div>
+  <div class="card">
+    <h2>Réseau WiFi</h2>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">Le WiFi est configuré via le portail captif au premier démarrage.</p>
+    <div style="background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;gap:20px">
+      <div><div style="font-size:.75rem;color:var(--muted)">Réseau</div><div id="wifi-ssid" style="font-weight:600">—</div></div>
+      <div><div style="font-size:.75rem;color:var(--muted)">Signal</div><div id="wifi-rssi-d" style="font-weight:600">—</div></div>
+    </div>
+    <div style="margin-top:12px;background:#1a0d0d;border:1px solid #3a1a1a;border-radius:6px;padding:10px">
+      <p style="font-size:.82rem;color:var(--warn);margin-bottom:8px">⚠️ Réinitialise le WiFi et redémarre l'ESP32. Hotspot: <b>Horloge-Config</b> (mdp: <b>horloge123</b>)</p>
+      <button class="btn-danger" onclick="resetWifi()">🔄 Changer de réseau</button>
+    </div>
+  </div>
+  <div class="save-bar">
+    <button class="btn-primary" onclick="saveWifi()">💾 Enregistrer</button>
+  </div>
+</div>
+
+<!-- Heure -->
+<div id="tab-time" class="panel">
+  <div class="card">
+    <h2>Serveur NTP</h2>
+    <label>Serveur NTP</label>
+    <input type="text" id="ntpServer" placeholder="pool.ntp.org">
+    <div class="row2">
+      <div>
+        <label>Décalage UTC (secondes)</label>
+        <input type="number" id="gmtOffsetSec" placeholder="3600">
+        <small style="color:var(--muted);font-size:.75rem">France hiver = 3600</small>
+      </div>
+      <div>
+        <label>Heure d'été (secondes)</label>
+        <input type="number" id="daylightOffsetSec" placeholder="3600">
+        <small style="color:var(--muted);font-size:.75rem">3600 en été, 0 en hiver</small>
+      </div>
+    </div>
+  </div>
+  <div class="save-bar"><button class="btn-primary" onclick="saveTime()">💾 Enregistrer</button></div>
+</div>
+
+<!-- Météo -->
+<div id="tab-weather" class="panel">
+  <div class="card">
+    <h2>OpenWeatherMap</h2>
+    <label>Clé API <a href="https://openweathermap.org/api" target="_blank" style="color:var(--accent);font-size:.75rem">(gratuite)</a></label>
+    <input type="text" id="owmApiKey" placeholder="Clé API...">
+    <label>Ville</label>
+    <input type="text" id="owmCity" placeholder="Paris,FR">
+    <div class="toggle" style="margin-top:10px">
+      <input type="checkbox" id="useCelsius">
+      <label for="useCelsius" style="margin:0">Afficher en °C</label>
+    </div>
+    <label>Mise à jour (minutes)</label>
+    <input type="number" id="weatherRefreshMin" placeholder="10" min="5" max="60">
+  </div>
+  <div class="save-bar">
+    <button class="btn-success" onclick="refreshWeather()">🔄 Actualiser météo</button>
+    <button class="btn-primary" onclick="saveWeather()">💾 Enregistrer</button>
+  </div>
+</div>
+
+<!-- Affichage -->
+<div id="tab-display" class="panel">
+  <div class="card">
+    <h2>Thème de couleurs</h2>
+    <div class="theme-grid" id="theme-grid"></div>
+  </div>
+  <div class="card">
+    <h2>Écrans actifs</h2>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:8px">Décocher pour masquer un écran.</p>
+    <div id="screens-toggles"></div>
+  </div>
+  <div class="card">
+    <h2>Luminosité</h2>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" id="brightness" min="1" max="100" style="flex:1;accent-color:var(--accent)" oninput="document.getElementById('bval').textContent=this.value+'%'; setBrightnessLive(this.value)">
+      <span id="bval" style="color:var(--accent);font-weight:600;min-width:36px">30%</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Rotation des écrans</h2>
+    <div class="toggle">
+      <input type="checkbox" id="autoRotate">
+      <label for="autoRotate" style="margin:0">Rotation automatique</label>
+    </div>
+    <label>Durée par écran (secondes)</label>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" id="screenDurationSec" min="3" max="60" style="flex:1;accent-color:var(--accent)" oninput="document.getElementById('dval').textContent=this.value+'s'">
+      <span id="dval" style="color:var(--accent);font-weight:600;min-width:30px">8s</span>
+    </div>
+  </div>
+  <div class="save-bar"><button class="btn-primary" onclick="saveDisplay()">💾 Enregistrer</button></div>
+</div>
+
+<!-- Notes -->
+<div id="tab-notes" class="panel">
+  <div class="card">
+    <h2>Notes affichées à l'écran</h2>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:10px">4 lignes de texte libre (max ~12 caractères par ligne selon la police).</p>
+    <label>Ligne 1</label>
+    <input type="text" id="note0" maxlength="31" placeholder="Texte ligne 1">
+    <label>Ligne 2</label>
+    <input type="text" id="note1" maxlength="31" placeholder="Texte ligne 2">
+    <label>Ligne 3</label>
+    <input type="text" id="note2" maxlength="31" placeholder="Texte ligne 3">
+    <label>Ligne 4</label>
+    <input type="text" id="note3" maxlength="31" placeholder="Texte ligne 4">
+  </div>
+  <div class="save-bar"><button class="btn-primary" onclick="saveNotes()">💾 Enregistrer</button></div>
+</div>
+
+<!-- Anniversaires -->
+<div id="tab-birthdays" class="panel">
+  <div class="card">
+    <h2>Anniversaires</h2>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:10px">Les 4 prochains seront affichés avec le nombre de jours restants.</p>
+    <ul id="bd-list" style="list-style:none"></ul>
+    <div style="display:grid;grid-template-columns:1fr 60px 60px auto;gap:8px;margin-top:12px;align-items:end">
+      <div><label>Prénom</label><input type="text" id="bd-name" maxlength="23" placeholder="Marie"></div>
+      <div><label>Jour</label><input type="number" id="bd-day" min="1" max="31" value="1"></div>
+      <div><label>Mois</label><input type="number" id="bd-month" min="1" max="12" value="1"></div>
+      <div><label>&nbsp;</label><button class="btn-success btn-sm" onclick="addBirthday()">+ Ajouter</button></div>
+    </div>
+  </div>
+  <div class="save-bar"><button class="btn-primary" onclick="saveBirthdays()">💾 Enregistrer</button></div>
+</div>
+
+<!-- Calendrier -->
+<div id="tab-calendar" class="panel">
+  <div class="card">
+    <h2>Activités</h2>
+    <div class="act-cols">
+      <span>H</span><span>M</span><span>Label</span><span>Alerte</span><span>Icône</span><span>Jours</span><span></span>
+    </div>
+    <div id="act-list"></div>
+
+    <h3 style="margin:14px 0 8px;font-size:.8rem;color:var(--muted)">Ajouter une activité</h3>
+    <div class="add-grid">
+      <div><label>Heure</label><input type="number" id="nh" min="0" max="23" value="8"></div>
+      <div><label>Min</label><input type="number" id="nm" min="0" max="59" value="0"></div>
+      <div><label>Label</label><input type="text" id="nl" placeholder="École"></div>
+      <div><label>Alerte(min)</label><input type="number" id="na" value="0" min="0" max="120"></div>
+      <div><label>Icône</label>
+        <select id="ni">
+          <option value="star">⭐ Défaut</option>
+          <option value="sun">☀️ Réveil</option>
+          <option value="bag">🎒 École</option>
+          <option value="cake">🎂 Goûter</option>
+          <option value="moon">🌙 Dodo</option>
+          <option value="sport">⚽ Sport</option>
+          <option value="book">📖 Lecture</option>
+          <option value="food">🍽️ Repas</option>
+          <option value="car">🚗 Trajet</option>
+        </select>
+      </div>
+    </div>
+    <div class="add-days">
+      <span style="font-size:.78rem;color:var(--muted)">Jours:</span>
+      <div id="new-days" style="display:flex;gap:3px">
+        <button type="button" class="dchip on" data-di="1">Lu</button>
+        <button type="button" class="dchip on" data-di="2">Ma</button>
+        <button type="button" class="dchip on" data-di="3">Me</button>
+        <button type="button" class="dchip on" data-di="4">Je</button>
+        <button type="button" class="dchip on" data-di="5">Ve</button>
+        <button type="button" class="dchip on" data-di="6">Sa</button>
+        <button type="button" class="dchip on" data-di="0">Di</button>
+      </div>
+      <button type="button" class="btn-success btn-sm" onclick="addActivity()" style="margin-left:auto">+ Ajouter</button>
+    </div>
+  </div>
+  <div class="save-bar"><button class="btn-primary" onclick="saveCalendar()">💾 Enregistrer</button></div>
+</div>
+
+<div id="reboot-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#d29922;color:#000;padding:12px 20px;align-items:center;justify-content:space-between;z-index:100;font-weight:500;">
+  <span>⚠️ Redémarrage requis pour appliquer les changements WiFi/mDNS</span>
+  <button onclick="rebootDevice()" style="background:#000;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;">🔄 Redémarrer maintenant</button>
+</div>
+<div id="toast"></div>
+
+<script>
+var cfg = {};
+var DAYS = ['Di','Lu','Ma','Me','Je','Ve','Sa'];
+var DAYS_DISPLAY = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
+var DAYS_IDX = [1,2,3,4,5,6,0]; // indices dans le bitmask
+var ICONS = ['star','sun','bag','cake','moon','sport','book','food','car'];
+var SCREEN_NAMES = ['⏰ Horloge','🌤️ Météo','📅 Prochain RDV','📋 Programme','🌙 Lune','🗒️ Notes','🎂 Anniversaires'];
+var SWATCHES = [
+  ['#64b4ff','#3c78b4','#ffffff'],  // Nuit bleue : bleu, bleu moyen, blanc
+  ['#50b43c','#784828','#a0dc50'],  // Foret : vert, marron, vert vif
+  ['#ffa03c','#c87828','#fff0b4'],  // Coucher : orange, orange moyen, jaune chaud
+  ['#c8a0ff','#a078c8','#ffe0ff'],  // Lavande : violet, violet moyen, rose
+  ['#b4dcf0','#78aac8','#dcf5ff'],  // Glace : bleu pâle, gris-bleu, blanc glacé
+  ['#c8c8c8','#8c8c8c','#ffffff'],  // Monochrome
+  ['#00c800','#008c00','#00ff00'],  // Vert LED
+  ['#dc0000','#a00000','#ff5050'],  // Rouge LED
+  ['#c8c8c8','#a0a0a0','#ffffff'],  // Minuit
+];
+
+function switchTab(name, el) {
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.getElementById('tab-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  loadTab(name);
+}
+
+async function loadTab(name) {
+  try {
+    var t0 = performance.now();
+    var r = await fetch('/api/config/' + name);
+    if (!r.ok) return;
+    var d = await r.json();
+    Object.assign(cfg, d);
+    if      (name==='wifi')      fillWifi(d);
+    else if (name==='time')      fillTime(d);
+    else if (name==='weather')   fillWeather(d);
+    else if (name==='display')   fillDisplay(d);
+    else if (name==='notes')     fillNotes(d);
+    else if (name==='calendar')  renderActivities();
+    else if (name==='birthdays') renderBirthdays();
+    console.log('[loadTab] ' + name + ' : ' + Math.round(performance.now()-t0) + 'ms');
+  } catch(e) { console.error('loadTab:', e); }
+}
+
+function fillWifi(d) {
+  sv('deviceName', d.deviceName||''); sv('mdnsName', d.mdnsName||'horloge');
+  var mp=ge('mdns-preview'); if(mp) mp.textContent=d.mdnsName||'horloge';
+  sv('wifiSSID', d.wifiSSID||'');
+}
+function fillTime(d) {
+  sv('ntpServer', d.ntpServer||'pool.ntp.org');
+  sv('gmtOffsetSec', d.gmtOffsetSec||3600);
+  sv('daylightOffsetSec', d.daylightOffsetSec||3600);
+}
+function fillWeather(d) {
+  sv('owmApiKey', d.owmApiKey||''); sv('owmCity', d.owmCity||'');
+  sc('useCelsius', d.useCelsius!==false);
+  sv('weatherRefreshMin', Math.round((d.weatherRefreshMs||600000)/60000));
+}
+function fillDisplay(d) {
+  sv('brightness', d.brightness||30); st('bval', (d.brightness||30)+'%');
+  var dur=Math.round((d.screenDurationMs||8000)/1000);
+  sv('screenDurationSec', dur); st('dval', dur+'s');
+  sc('autoRotate', d.autoRotate!==false);
+  if(d.themeId!==undefined) cfg.themeId=d.themeId;
+  if(d.screensEnabled) cfg.screensEnabled=d.screensEnabled;
+  if(d.themes) cfg.themes=d.themes;
+  renderThemes(); renderScreens();
+}
+function fillNotes(d) {
+  var notes=d.notes||['','','',''];
+  for(var i=0;i<4;i++) sv('note'+i, notes[i]||'');
+}
+
+// ── Fonctions save par onglet ──────────────────────────────
+async function saveWifi() {
+  await postJson('/api/config/wifi', {
+    deviceName: ge('deviceName').value,
+    mdnsName:   ge('mdnsName').value.toLowerCase().replace(/[^a-z0-9-]/g,''),
+    wifiPass:   ge('wifiPass')?ge('wifiPass').value:''
+  });
+  toast('✅ Identité enregistrée !');
+  var mdnsChanged = ge('mdnsName').value!==(cfg.mdnsName||'horloge');
+  var wifiChanged = ge('wifiPass')&&ge('wifiPass').value!=='';
+  if(mdnsChanged||wifiChanged) { var rb=ge('reboot-bar'); if(rb) rb.style.display='flex'; }
+  await loadTab('wifi');
+}
+async function saveTime() {
+  await postJson('/api/config/time', {
+    ntpServer:         ge('ntpServer').value,
+    gmtOffsetSec:      +ge('gmtOffsetSec').value,
+    daylightOffsetSec: +ge('daylightOffsetSec').value
+  });
+  toast('✅ Heure enregistrée !');
+}
+async function saveWeather() {
+  await postJson('/api/config/weather', {
+    owmApiKey:        ge('owmApiKey').value,
+    owmCity:          ge('owmCity').value,
+    useCelsius:       ge('useCelsius').checked,
+    weatherRefreshMs: +ge('weatherRefreshMin').value*60000
+  });
+  toast('✅ Météo enregistrée !');
+}
+async function saveDisplay() {
+  await postJson('/api/config/display', {
+    brightness:       +ge('brightness').value,
+    screenDurationMs: +ge('screenDurationSec').value*1000,
+    autoRotate:       ge('autoRotate').checked,
+    themeId:          cfg.themeId||0,
+    screensEnabled:   cfg.screensEnabled||[true,true,true,true,true,true,true]
+  });
+  toast('✅ Affichage enregistré !');
+}
+async function saveNotes() {
+  await postJson('/api/config/notes', {
+    notes:[0,1,2,3].map(function(i){var e=ge('note'+i);return e?e.value:'';})
+  });
+  toast('✅ Notes enregistrées !');
+}
+async function saveCalendar() {
+  await postJson('/api/config/calendar', {
+    activities:(cfg.activities||[]).map(function(a){return Object.assign({},a);})
+  });
+  toast('✅ Calendrier enregistré !');
+}
+async function saveBirthdays() {
+  await postJson('/api/config/birthdays', {
+    birthdays:(cfg.birthdays||[]).map(function(b){return {name:String(b.name||''),day:+b.day,month:+b.month};})
+  });
+  toast('✅ Anniversaires enregistrés !');
+}
+async function save() { await saveWifi(); }
+async function saveGeneral() { await saveWifi(); }
+
+function toast(msg, err) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = err ? 'show err' : 'show';
+  setTimeout(function() { el.className = ''; }, 2800);
+}
+
+function ge(id) { return document.getElementById(id); }
+function sv(id, v) { var e = ge(id); if (e) e.value = v; }
+function sc(id, v) { var e = ge(id); if (e) e.checked = v; }
+function st(id, v) { var e = ge(id); if (e) e.textContent = v; }
+
+async function loadConfig() {
+  try {
+    // Charger l'onglet wifi par défaut au démarrage
+    await loadTab('wifi');
+  } catch(e) {
+    console.error('loadConfig:', e);
+    toast('Erreur chargement: ' + e.message, true);
+    setTimeout(loadConfig, 4000);
+  }
+}
+
+async function loadStatus() {
+  try {
+    var r = await fetch('/api/status');
+    var s = await r.json();
+    st('s-ip', s.wifiIP || '—');
+    st('s-rssi', (s.wifiRSSI || '—') + ' dBm');
+    st('s-ntp', s.ntpSynced ? '✅' : '❌');
+    st('s-weather', s.weatherOk ? '✅' : '❌');
+    st('hdr-time', s.time + ' · ' + s.date);
+    var u = s.uptime || 0;
+    st('s-uptime', u < 60 ? u + 's' : u < 3600 ? Math.floor(u/60) + 'min' : Math.floor(u/3600) + 'h');
+    var ssid = ge('wifi-ssid'); if (ssid) ssid.textContent = s.wifiSSID || '—';
+    var rssi = ge('wifi-rssi-d'); if (rssi) rssi.textContent = (s.wifiRSSI || '—') + ' dBm';
+  } catch(e) {}
+}
+
+function renderThemes() {
+  var grid = ge('theme-grid');
+  if (!grid || !cfg.themes) return;
+  grid.innerHTML = '';
+  cfg.themes.forEach(function(name, i) {
+    var card = document.createElement('div');
+    card.className = 'theme-card' + (cfg.themeId === i ? ' sel' : '');
+    var sw = SWATCHES[i] || SWATCHES[0];
+    card.innerHTML = '<div class="swatches">' +
+      sw.map(function(c) { return '<span style="background:' + c + '"></span>'; }).join('') +
+      '</div>' + name;
+    card.onclick = function() {
+      cfg.themeId = i;
+      document.querySelectorAll('.theme-card').forEach(function(c, j) {
+        c.classList.toggle('sel', j === i);
+      });
+    };
+    grid.appendChild(card);
+  });
+}
+
+function renderScreens() {
+  var ct = ge('screens-toggles');
+  if (!ct) return;
+  ct.innerHTML = '';
+  var enabled = cfg.screensEnabled || [true, true, true, true];
+  SCREEN_NAMES.forEach(function(name, i) {
+    var d = document.createElement('div');
+    d.className = 'toggle';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'scr' + i;
+    cb.checked = enabled[i] !== false;
+    cb.onchange = function() {
+      if (!cfg.screensEnabled) cfg.screensEnabled = [true,true,true,true,true,true,true];
+      cfg.screensEnabled[i] = cb.checked;
+      var any = cfg.screensEnabled.some(function(v) { return v; });
+      if (!any) { cb.checked = true; cfg.screensEnabled[i] = true; }
+    };
+    var lb = document.createElement('label');
+    lb.htmlFor = 'scr' + i;
+    lb.textContent = name;
+    lb.style.margin = '0';
+    d.appendChild(cb);
+    d.appendChild(lb);
+    ct.appendChild(d);
+  });
+}
+
+function renderActivities() {
+  var list = ge('act-list');
+  if (!list) return;
+  list.innerHTML = '';
+  (cfg.activities || []).forEach(function(a, i) {
+    var row = document.createElement('div');
+    row.className = 'act-row';
+
+    function inp(type, val, min, max, onChange) {
+      var el = document.createElement('input');
+      el.type = type; el.value = val;
+      if (min !== undefined) el.min = min;
+      if (max !== undefined) el.max = max;
+      el.onchange = function() { onChange(el.value); };
+      return el;
+    }
+
+    row.appendChild(inp('number', a.hour, 0, 23, function(v) { cfg.activities[i].hour = +v; }));
+    row.appendChild(inp('number', a.minute, 0, 59, function(v) { cfg.activities[i].minute = +v; }));
+
+    var lbl = document.createElement('input');
+    lbl.type = 'text'; lbl.value = a.label || '';
+    lbl.onchange = function() { cfg.activities[i].label = lbl.value; };
+    row.appendChild(lbl);
+
+    row.appendChild(inp('number', a.alert || 0, 0, 120, function(v) { cfg.activities[i].alert = +v; }));
+
+    var sel = document.createElement('select');
+    ICONS.forEach(function(ic) {
+      var o = document.createElement('option');
+      o.value = ic; o.textContent = ic;
+      if (a.icon === ic) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.onchange = function() { cfg.activities[i].icon = sel.value; };
+    row.appendChild(sel);
+
+    var dl = document.createElement('div');
+    dl.className = 'days-line';
+    DAYS_DISPLAY.forEach(function(d, pos) {
+      var di = DAYS_IDX[pos];
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'dchip' + (((a.days || 127) >> di) & 1 ? ' on' : '');
+      btn.textContent = d;
+      btn.onclick = function() {
+        cfg.activities[i].days = (cfg.activities[i].days || 127) ^ (1 << di);
+        btn.classList.toggle('on');
+      };
+      dl.appendChild(btn);
+    });
+    row.appendChild(dl);
+
+    var del = document.createElement('button');
+    del.type = 'button'; del.className = 'btn-danger btn-sm'; del.textContent = '✕';
+    del.onclick = function() { cfg.activities.splice(i, 1); renderActivities(); };
+    row.appendChild(del);
+
+    list.appendChild(row);
+  });
+}
+
+function renderBirthdays() {
+  var ul = ge('bd-list'); if (!ul) return;
+  ul.innerHTML = '';
+  (cfg.birthdays || []).forEach(function(b, i) {
+    var li = document.createElement('li');
+    li.style = 'display:grid;grid-template-columns:1fr 60px 60px auto;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)';
+
+    var inName = document.createElement('input');
+    inName.type = 'text'; inName.value = b.name; inName.maxLength = 23;
+    inName.style.fontSize = '.88rem';
+    inName.addEventListener('change', (function(idx){return function(){cfg.birthdays[idx].name=this.value;};})(i));
+
+    var inDay = document.createElement('input');
+    inDay.type = 'number'; inDay.value = b.day; inDay.min=1; inDay.max=31;
+    inDay.style.fontSize = '.88rem';
+    inDay.addEventListener('change', (function(idx){return function(){cfg.birthdays[idx].day=+this.value;};})(i));
+
+    var inMonth = document.createElement('input');
+    inMonth.type = 'number'; inMonth.value = b.month; inMonth.min=1; inMonth.max=12;
+    inMonth.style.fontSize = '.88rem';
+    inMonth.addEventListener('change', (function(idx){return function(){cfg.birthdays[idx].month=+this.value;};})(i));
+
+    var btn = document.createElement('button');
+    btn.className = 'btn-danger btn-sm'; btn.textContent = '✕';
+    btn.addEventListener('click', (function(idx){return function(){removeBirthday(idx);};})(i));
+
+    li.appendChild(inName); li.appendChild(inDay);
+    li.appendChild(inMonth); li.appendChild(btn);
+    ul.appendChild(li);
+  });
+}
+
+function removeBirthday(i) {
+  cfg.birthdays.splice(i, 1);
+  renderBirthdays();
+}
+
+function addBirthday() {
+  var name  = ge('bd-name').value.trim();
+  var day   = +ge('bd-day').value;
+  var month = +ge('bd-month').value;
+  if (!name || day < 1 || day > 31 || month < 1 || month > 12) return;
+  cfg.birthdays = cfg.birthdays || [];
+  cfg.birthdays.push({name: name, day: day, month: month});
+  cfg.birthdays.sort(function(a,b) { return (a.month*100+a.day) - (b.month*100+b.day); });
+  ge('bd-name').value = '';
+  renderBirthdays();
+}
+
+function addActivity() {
+  var days = 0;
+  ge('new-days').querySelectorAll('.dchip').forEach(function(b) {
+    if (b.classList.contains('on')) days |= (1 << parseInt(b.getAttribute('data-di')));
+  });
+  if (!cfg.activities) cfg.activities = [];
+  cfg.activities.push({
+    hour: +ge('nh').value,
+    minute: +ge('nm').value,
+    label: ge('nl').value || 'Activité',
+    alert: +ge('na').value || 0,
+    icon: ge('ni').value,
+    days: days || 127
+  });
+  cfg.activities.sort(function(a, b) { return (a.hour*60+a.minute) - (b.hour*60+b.minute); });
+  renderActivities();
+  ge('nl').value = '';
+}
+
+// ── saveWifi
+
+
+
+
+
+async function saveGeneral() { await saveWifi(); }
+async function save() { await saveGeneral(); }
+
+// ── saveCalendar : activités seulement
+
+
+async function postJson(url, data) {
+  var body = JSON.stringify(data);
+  var t0 = performance.now();
+  try {
+    var r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:body});
+    console.log('[postJson] ' + url + ' : ' + Math.round(performance.now()-t0) + 'ms status=' + r.status);
+    if (!r.ok) { toast('❌ Erreur ' + url, true); return false; }
+    var j = await r.json();
+    if (!j.ok) { toast('❌ Erreur: ' + JSON.stringify(j), true); return false; }
+    return true;
+  } catch(e) {
+    toast('❌ ' + e.message, true);
+    return false;
+  }
+}
+
+
+async function setBrightnessLive(val) {
+  try {
+    await fetch('/api/brightness', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({brightness: +val})
+    });
+  } catch(e) {}
+}
+
+async function resetWifi() {
+  if (!confirm('Réinitialiser le WiFi ?')) return;
+  await fetch('/api/wifi/reset', {method:'POST'});
+  toast('🔄 Redémarrage...');
+}
+
+async function refreshWeather() {
+  await fetch('/api/weather/refresh', {method:'POST'});
+  toast('🔄 Météo actualisée');
+}
+
+document.querySelectorAll('#new-days .dchip').forEach(function(el) {
+  el.addEventListener('click', function() { el.classList.toggle('on'); });
+});
+
+loadConfig();
+loadStatus();
+setInterval(loadStatus, 10000);
+</script>
+</body>
+</html>

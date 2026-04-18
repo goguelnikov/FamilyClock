@@ -1,0 +1,16 @@
+# PlatformIO
+.pio/
+.vscode/
+
+# Build artifacts
+*.o
+*.elf
+*.bin
+*.map
+
+# Secrets (never commit)
+src/secrets.h
+
+# OS
+.DS_Store
+Thumbs.db
