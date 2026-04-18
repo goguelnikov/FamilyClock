@@ -2,7 +2,7 @@
 
 A connected family clock displayed on a 64×32 RGB LED matrix panel, powered by an ESP32. Fully configurable through a web interface accessible from any browser on the local network.
 
-![ESP32](https://img.shields.io/badge/ESP32-Arduino-blue) ![PlatformIO](https://img.shields.io/badge/PlatformIO-6.x-orange) ![License](https://img.shields.io/badge/license-MIT-green)
+![ESP32](https://img.shields.io/badge/ESP32-Arduino-blue) ![PlatformIO](https://img.shields.io/badge/PlatformIO-6.x-orange) ![License](https://img.shields.io/badge/license-GPL%20v3%20%2F%20Commercial-blue)
 
 ---
 
@@ -202,4 +202,12 @@ tzapu/WiFiManager @ ^2.0.17
 
 ## 📄 License
 
-MIT License — free to use, modify and distribute.
+This project uses a **dual license**:
+
+- **Open Source (GPL v3)** — free for personal, educational and open source projects
+- **Commercial** — contact the author for commercial or professional use
+
+In all cases, attribution is required:
+> *"Family Clock ESP32 — Copyright (c) 2026 Goguelnikov — github.com/Goguelnikov"*
+
+See [LICENSE](LICENSE) for full terms.

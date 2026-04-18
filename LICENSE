@@ -1,0 +1,58 @@
+DUAL LICENSE
+
+Copyright (c) 2026 Goguelnikov
+
+================================================================================
+OPTION 1 — OPEN SOURCE LICENSE (GNU General Public License v3)
+================================================================================
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program. If not, see <https://www.gnu.org/licenses/>.
+
+This license applies to personal, educational, and open source projects that
+themselves are distributed under a GPL-compatible license.
+
+================================================================================
+OPTION 2 — COMMERCIAL LICENSE
+================================================================================
+
+For any commercial use — including but not limited to:
+  - Integration into a commercial product or service
+  - Use in a professional or corporate environment
+  - Selling hardware or services based on this project
+  - Any use where the GPL v3 requirements cannot be met
+
+A separate commercial license is required.
+
+Please contact the author to obtain a commercial license:
+
+  Author : Goguelnikov
+  GitHub : https://github.com/Goguelnikov
+  Email  : [your email]
+
+Commercial licensees receive:
+  - The right to use this software without GPL obligations
+  - No requirement to disclose source code
+  - Attribution in documentation or UI required ("Based on Family Clock
+    by Goguelnikov — github.com/Goguelnikov")
+
+================================================================================
+ATTRIBUTION REQUIREMENT (ALL USES)
+================================================================================
+
+In all cases — open source or commercial — the following credit must be
+preserved in source code headers, documentation, or user-visible credits:
+
+  "Family Clock ESP32 — Copyright (c) 2026 Goguelnikov
+   https://github.com/Goguelnikov/FamilyClock"
+
+================================================================================
