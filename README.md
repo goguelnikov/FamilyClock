@@ -200,6 +200,14 @@ tzapu/WiFiManager @ ^2.0.17
 
 ---
 
+## 🙏 Credits
+
+- **Hardware** — Board design by [Brian Lough](https://github.com/witnessmenow) — a very convenient ESP32 + HUB75 shield that makes wiring a breeze (https://www.youtube.com/@BrianLough).
+
+- **Fonts** — Big and small proportional fonts originally from the [Tech Talkies SimpleClock](https://www.youtube.com/@TechTalkies) project. Great starting point for HUB75 clock displays (https://www.youtube.com/watch?v=BChsJNzNCIU).
+
+---
+
 ## 📄 License
 
 This project uses a **dual license**:
