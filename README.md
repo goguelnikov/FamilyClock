@@ -57,7 +57,7 @@ A connected family clock displayed on a 64×32 RGB LED matrix panel, powered by 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/horloge-familiale
+   git clone https://github.com/goguelnikov/FamilyClock
    cd horloge-familiale
    ```
 
